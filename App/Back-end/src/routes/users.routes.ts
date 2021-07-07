@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { classToClass } from 'class-transformer';
+
 import multer from 'multer';
 import uploadConfig from '../config/upload';
 
@@ -6,6 +8,7 @@ import CreateUserService from '../services/CreateUserService';
 import UpdateUserAvatarService from '../services/UpdateUserAvatarService';
 
 import ensureAuthenticated from '../middlewares/ensureAuthenticated';
+import AppError from '../errors/AppError';
 
 const usersRouter = Router();
 const upload = multer(uploadConfig);
@@ -22,10 +25,7 @@ usersRouter.post('/', async (request, response) => {
       password,
     });
 
-    // @ts-expect-error Aqui vai ocorrer um erro, mas estou ignorando
-    delete user.password;
-
-    return response.json(user);
+    return response.json(classToClass(user));
   } catch (err) {
     return response.status(400).json({ error: err.message });
   }
@@ -39,15 +39,16 @@ usersRouter.patch(
     try {
       const updateUserAvatar = new UpdateUserAvatarService();
 
+      if (request.file === undefined) {
+        throw new AppError('File not find.', 400);
+      }
+
       const user = await updateUserAvatar.execute({
         user_id: request.user.id,
         avatarFilename: request.file.filename,
       });
 
-      // @ts-expect-error Aqui vai ocorrer um erro, mas estou ignorando
-      delete user.password;
-
-      return response.json(user);
+      return response.json(classToClass(user));
     } catch (err) {
       return response.status(400).json({ error: err.message });
     }
